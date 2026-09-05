@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: theme('colors.sys-lavender');
+    background-image: radial-gradient(theme('colors.sys-dark-violet') 1px, transparent 1px);
+    background-size: 8px 8px;
+    background-position: 0 0, 4px 4px;
+    color: theme('colors.sys-line');
+  }
+
+  /* Reset border radius for pixel art feel */
+  *, ::before, ::after {
+    border-radius: 0 !important;
+  }
+}
+
+@layer utilities {
+  .retro-border {
+    @apply border-2 border-solid border-sys-line;
+  }
+  
+  .retro-panel {
+    @apply retro-border bg-sys-white;
+  }
+
+  .retro-panel-dark {
+    @apply retro-border bg-sys-base text-sys-white;
+  }
+  
+  .retro-shadow {
+    box-shadow: 4px 4px 0 0 theme('colors.sys-line');
+  }
+
+  .retro-shadow-sm {
+    box-shadow: 2px 2px 0 0 theme('colors.sys-line');
+  }
+
+  .retro-button {
+    @apply retro-panel px-4 py-2 font-display tracking-wider text-sm hover:bg-sys-pale-pink active:translate-y-0.5 active:shadow-none transition-none retro-shadow-sm;
+  }
+}
