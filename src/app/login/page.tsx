@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import SystemWindow from '@/components/ui/SystemWindow'
+import { SystemWindow } from '@/components/ui/SystemWindow'
 
 export default function LoginPage() {
   const handleLogin = () => {
