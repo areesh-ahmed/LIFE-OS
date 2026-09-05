@@ -11,7 +11,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <SystemWindow title="SYSTEM BOOT" variant="secondary" className="mb-8">
+        <SystemWindow title="SYSTEM BOOT" className="mb-8">
           <div className="p-6 text-center space-y-6">
             <div>
               <h1 className="text-2xl font-bold text-white tracking-widest uppercase">
