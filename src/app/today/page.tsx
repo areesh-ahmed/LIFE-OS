@@ -18,6 +18,14 @@ interface HabitData {
   completedToday: boolean;
 }
 
+interface SleepData {
+  sleepStart: string;
+  wakeTime: string;
+  durationMinutes: number;
+  targetMinutes: number;
+  status: string;
+}
+
 export default function TodayScreen() {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,7 +55,7 @@ export default function TodayScreen() {
   const tasks = data.tasks as TaskData[];
   const habits = data.habits as HabitData[];
   const systemStatus = data.systemStatus as Record<string, number>;
-  const sleep = data.sleep as Record<string, any> | null;
+  const sleep = data.sleep as SleepData | null;
   const date = data.date as string;
 
   const completedHabits = habits.filter(h => h.completedToday).length;
