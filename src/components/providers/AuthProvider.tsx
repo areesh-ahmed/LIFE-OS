@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (pathname === '/login') {
           router.push('/today') // redirect to dashboard if logged in and on login page
         }
-      } catch (err) {
+      } catch {
         setUser(null)
         if (pathname !== '/login') {
           router.push('/login')

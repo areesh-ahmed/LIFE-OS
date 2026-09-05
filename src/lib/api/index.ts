@@ -13,7 +13,7 @@ export const todayApi = {
     habits: (Habit & { completedToday: boolean })[]
     sleep: SleepLog | null
     systemStatus: SystemMetrics
-    recentActivity: any[]
+    recentActivity: unknown[]
   }>('/today'),
 }
 

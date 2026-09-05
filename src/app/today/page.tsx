@@ -5,8 +5,21 @@ import { todayApi } from '@/lib/api';
 import { PixelCheckbox } from '@/components/ui/PixelCheckbox';
 import { SystemWindow } from '@/components/ui/SystemWindow';
 
+interface TaskData {
+  id: string;
+  title: string;
+  status: string;
+  scheduledAt?: string | null;
+}
+
+interface HabitData {
+  id: string;
+  title: string;
+  completedToday: boolean;
+}
+
 export default function TodayScreen() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,8 +44,13 @@ export default function TodayScreen() {
     return <div className="p-8 font-mono text-red-500">Failed to load system data.</div>;
   }
 
-  const { tasks, habits, systemStatus, sleep, date } = data;
-  const completedHabits = habits.filter((h: any) => h.completedToday).length;
+  const tasks = data.tasks as TaskData[];
+  const habits = data.habits as HabitData[];
+  const systemStatus = data.systemStatus as Record<string, number>;
+  const sleep = data.sleep as Record<string, any> | null;
+  const date = data.date as string;
+
+  const completedHabits = habits.filter(h => h.completedToday).length;
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-6 pb-8">
@@ -46,7 +64,7 @@ export default function TodayScreen() {
         {/* SECTION 1 - DAILY TASKS */}
         <SystemWindow title="DAILY TASKS" className="lg:col-span-8">
           <div className="flex flex-col gap-4">
-            {tasks.map((task: any) => (
+            {tasks.map(task => (
               <div key={task.id} className="border-b-2 border-sys-line/10 pb-4 last:border-0 last:pb-0">
                 <PixelCheckbox 
                   checked={task.status === 'COMPLETED'} 
@@ -66,7 +84,7 @@ export default function TodayScreen() {
           {/* SECTION 2 - HABITS */}
           <SystemWindow title="HABITS">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-              {habits.map((habit: any) => (
+              {habits.map(habit => (
                 <PixelCheckbox 
                   key={habit.id}
                   checked={habit.completedToday} 
@@ -78,7 +96,7 @@ export default function TodayScreen() {
             <div className="mt-6 pt-4 border-t-2 border-sys-line font-mono text-xs flex justify-between items-center">
               <span>{completedHabits} / {habits.length} COMPLETE</span>
               <div className="flex gap-1">
-                {habits.map((_: any, i: number) => (
+                {habits.map((_, i) => (
                   <div key={i} className={`w-2 h-4 border border-sys-line ${i < completedHabits ? 'bg-sys-line' : 'bg-transparent'}`} />
                 ))}
               </div>
