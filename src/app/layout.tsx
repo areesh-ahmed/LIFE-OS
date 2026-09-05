@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Silkscreen, Space_Mono, Atkinson_Hyperlegible } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 import { SystemBar } from "@/components/layout/SystemBar";
 import { StatusBar } from "@/components/layout/StatusBar";
 
@@ -37,11 +38,13 @@ export default function RootLayout({
       <body
         className={`${silkscreen.variable} ${spaceMono.variable} ${atkinson.variable} font-body antialiased flex flex-col h-screen overflow-hidden`}
       >
-        <SystemBar />
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          {children}
-        </main>
-        <StatusBar />
+        <AuthProvider>
+          <SystemBar />
+          <main className="flex-1 overflow-y-auto p-4 md:p-8">
+            {children}
+          </main>
+          <StatusBar />
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  googleId    String   @unique
+  email       String   @unique
+  name        String
+  avatarUrl   String?
+  lastLoginAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks        Task[]
+  habits       Habit[]
+  weeklyGoals  WeeklyGoal[]
+  activityLogs ActivityLog[]
+  sleepLogs    SleepLog[]
+  focusSessions FocusSession[]
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  userId      String
+  title       String
+  description String?
+  scheduledAt DateTime?
+  dueDate     DateTime?
+  category    String
+  priority    Priority
+  status      TaskStatus @default(TODO)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  focusSessions FocusSession[]
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Habit {
+  id            String   @id @default(uuid())
+  userId        String
+  title         String
+  description   String?
+  frequency     String
+  targetPerWeek Int
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completions HabitCompletion[]
+}
+
+model HabitCompletion {
+  id            String   @id @default(uuid())
+  habitId       String
+  userId        String
+  completedDate String   // Format: YYYY-MM-DD (local calendar date)
+  completedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  
+  @@unique([habitId, completedDate])
+}
+
+model WeeklyGoal {
+  id          String    @id @default(uuid())
+  userId      String
+  title       String
+  weekStart   String    // Format: YYYY-MM-DD (start of the week)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SleepLog {
+  id              String   @id @default(uuid())
+  userId          String
+  sleepStart      DateTime
+  wakeTime        DateTime
+  durationMinutes Int
+  targetMinutes   Int
+  status          SleepStatus
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum SleepStatus {
+  GOOD
+  FAIR
+  POOR
+}
+
+model FocusSession {
+  id              String   @id @default(uuid())
+  userId          String
+  taskId          String?
+  projectName     String?
+  startedAt       DateTime
+  endedAt         DateTime?
+  durationSeconds Int
+  status          FocusStatus @default(IN_PROGRESS)
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task            Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+}
+
+enum FocusStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
