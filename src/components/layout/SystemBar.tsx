@@ -30,6 +30,8 @@ export function SystemBar() {
     return () => clearInterval(interval);
   }, []);
 
+  if (pathname === '/login') return null;
+
   return (
     <header className="relative flex-none flex items-center justify-between bg-sys-base text-sys-white border-b-2 border-sys-line px-4 py-2 font-mono text-sm retro-shadow-sm z-50">
       <div className="flex items-center gap-6">

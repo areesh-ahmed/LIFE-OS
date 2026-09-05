@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
+
 
 export function StatusBar() {
   const [dateStr, setDateStr] = useState('');
@@ -9,6 +11,10 @@ export function StatusBar() {
     const d = new Date();
     setDateStr(d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }));
   }, []);
+
+  const pathname = usePathname();
+
+  if (pathname === '/login') return null;
 
   return (
     <footer className="flex-none flex flex-wrap items-center gap-4 md:gap-6 bg-sys-white text-sys-line border-t-2 border-sys-line px-4 py-1 font-mono text-xs z-50 retro-shadow-[0_-2px_0_0_#0D0814] mt-auto">
