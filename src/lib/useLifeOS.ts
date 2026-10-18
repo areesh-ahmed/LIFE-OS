@@ -2,21 +2,27 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  LifeOSState,
-  defaultState,
+  createEmptyState,
   getStoredState,
   saveState,
   calculateMetrics,
   logActivity,
 } from './storage';
-import { Task, Habit } from './mockData';
+import { LifeOSState, Task, Habit, SleepEntry, Priority, SleepQuality } from './types';
+import {
+  getTodayDateString,
+  calculateSleepDuration,
+} from './dateUtils';
+import { getDemoState } from './demoData';
 
 export function useLifeOS() {
-  const [state, setState] = useState<LifeOSState>(defaultState);
+  const [state, setState] = useState<LifeOSState>(createEmptyState);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    setState(getStoredState());
+    // Read actual storage on mount (avoids hydration mismatch)
+    const stored = getStoredState();
+    setState(stored);
     setIsLoaded(true);
 
     const handleStorageUpdate = (event: Event) => {
@@ -37,21 +43,26 @@ export function useLifeOS() {
     };
   }, []);
 
+  // ---------------- TASKS ----------------
   const toggleTask = useCallback((id: string) => {
     saveState((prev) => {
-      let toggledTitle = '';
+      let taskTitle = '';
       let isNowComplete = false;
       const tasks = prev.tasks.map((task) => {
         if (task.id === id) {
-          toggledTitle = task.title;
+          taskTitle = task.title;
           isNowComplete = !task.completed;
-          return { ...task, completed: !task.completed };
+          return {
+            ...task,
+            completed: isNowComplete,
+            completedAt: isNowComplete ? new Date().toISOString() : undefined,
+          };
         }
         return task;
       });
-      if (toggledTitle) {
+      if (taskTitle) {
         logActivity(
-          isNowComplete ? `Task completed: ${toggledTitle}` : `Task reopened: ${toggledTitle}`,
+          isNowComplete ? `Task completed: ${taskTitle}` : `Task reopened: ${taskTitle}`,
           isNowComplete ? '✓' : '•'
         );
       }
@@ -59,53 +70,74 @@ export function useLifeOS() {
     });
   }, []);
 
-  const addTask = useCallback((title: string, category = 'WORK', priority: 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM', time?: string) => {
+  const addTask = useCallback(
+    (
+      title: string,
+      category = 'WORK',
+      priority: Priority = 'MEDIUM',
+      time?: string,
+      date?: string
+    ) => {
+      saveState((prev) => {
+        const newTask: Task = {
+          id: Date.now().toString(),
+          title: title.trim(),
+          category: category.toUpperCase(),
+          priority,
+          completed: false,
+          date: date || getTodayDateString(),
+          time: time || undefined,
+        };
+        logActivity(`New task registered: ${newTask.title}`, '+');
+        return {
+          ...prev,
+          tasks: [newTask, ...prev.tasks],
+        };
+      });
+    },
+    []
+  );
+
+  const deleteTask = useCallback((id: string) => {
     saveState((prev) => {
-      const newTask: Task = {
-        id: Date.now().toString(),
-        title,
-        category: category.toUpperCase(),
-        priority,
-        completed: false,
-        time: time || new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-      };
-      logActivity(`New task created: ${title}`, '+');
+      const target = prev.tasks.find((t) => t.id === id);
+      if (target) {
+        logActivity(`Task purged: ${target.title}`, '×');
+      }
       return {
         ...prev,
-        tasks: [newTask, ...prev.tasks],
+        tasks: prev.tasks.filter((t) => t.id !== id),
       };
     });
   }, []);
 
-  const deleteTask = useCallback((id: string) => {
-    saveState((prev) => ({
-      ...prev,
-      tasks: prev.tasks.filter((t) => t.id !== id),
-    }));
-  }, []);
-
-  const toggleHabit = useCallback((id: string) => {
+  // ---------------- HABITS ----------------
+  const toggleHabit = useCallback((id: string, dateStr: string = getTodayDateString()) => {
     saveState((prev) => {
       let habitTitle = '';
       let isDone = false;
       const habits = prev.habits.map((habit) => {
         if (habit.id === id) {
           habitTitle = habit.title;
-          isDone = !habit.completedToday;
-          const nextCompletedToday = !habit.completedToday;
-          const streakDelta = nextCompletedToday ? 1 : Math.max(0, habit.streak - 1);
-          const weeklyCompletedDelta = nextCompletedToday ? habit.weeklyCompleted + 1 : Math.max(0, habit.weeklyCompleted - 1);
+          const currentDates = habit.completedDates || [];
+          const exists = currentDates.includes(dateStr);
+          isDone = !exists;
+          const nextDates = exists
+            ? currentDates.filter((d) => d !== dateStr)
+            : [...currentDates, dateStr];
+
           return {
             ...habit,
-            completedToday: nextCompletedToday,
-            streak: nextCompletedToday ? habit.streak + 1 : streakDelta,
-            weeklyCompleted: weeklyCompletedDelta,
+            completedDates: nextDates,
           };
         }
         return habit;
       });
       if (habitTitle) {
-        logActivity(isDone ? `Habit logged: ${habitTitle}` : `Habit unmarked: ${habitTitle}`, isDone ? '✓' : '•');
+        logActivity(
+          isDone ? `Habit logged: ${habitTitle}` : `Habit unmarked: ${habitTitle}`,
+          isDone ? '✓' : '•'
+        );
       }
       return { ...prev, habits };
     });
@@ -115,14 +147,12 @@ export function useLifeOS() {
     saveState((prev) => {
       const newHabit: Habit = {
         id: Date.now().toString(),
-        title,
+        title: title.trim(),
         frequency,
-        weeklyTarget,
-        weeklyCompleted: 0,
-        completedToday: false,
-        streak: 0,
+        weeklyTarget: Math.max(1, Math.min(7, weeklyTarget)),
+        completedDates: [],
       };
-      logActivity(`New habit tracked: ${title}`, '+');
+      logActivity(`New habit protocol initialized: ${newHabit.title}`, '+');
       return {
         ...prev,
         habits: [...prev.habits, newHabit],
@@ -130,40 +160,177 @@ export function useLifeOS() {
     });
   }, []);
 
-  const toggleWeekly = useCallback((id: string) => {
-    saveState((prev) => ({
-      ...prev,
-      weeklyChecklist: prev.weeklyChecklist.map((item) =>
-        item.id === id ? { ...item, completed: !item.completed } : item
-      ),
-    }));
-  }, []);
-
-  const addWeekly = useCallback((title: string) => {
-    saveState((prev) => ({
-      ...prev,
-      weeklyChecklist: [
-        ...prev.weeklyChecklist,
-        { id: Date.now().toString(), title, completed: false },
-      ],
-    }));
-    logActivity(`Added weekly goal: ${title}`, '+');
-  }, []);
-
-  const finishFocusSession = useCallback((durationSeconds: number, projectName: string) => {
+  const deleteHabit = useCallback((id: string) => {
     saveState((prev) => {
-      const minutes = Math.round(durationSeconds / 60);
-      logActivity(`Focus sprint concluded: ${projectName} (${minutes} mins)`, '⚡');
+      const target = prev.habits.find((h) => h.id === id);
+      if (target) {
+        logActivity(`Habit deleted: ${target.title}`, '×');
+      }
       return {
         ...prev,
-        focusSecondsToday: prev.focusSecondsToday + durationSeconds,
-        focusSessionsCount: prev.focusSessionsCount + 1,
+        habits: prev.habits.filter((h) => h.id !== id),
       };
     });
   }, []);
 
+  // ---------------- WEEKLY GOALS ----------------
+  const toggleWeekly = useCallback((id: string) => {
+    saveState((prev) => {
+      let itemTitle = '';
+      let isDone = false;
+      const weeklyChecklist = prev.weeklyChecklist.map((item) => {
+        if (item.id === id) {
+          itemTitle = item.title;
+          isDone = !item.completed;
+          return { ...item, completed: !item.completed };
+        }
+        return item;
+      });
+      if (itemTitle) {
+        logActivity(
+          isDone ? `Weekly goal achieved: ${itemTitle}` : `Weekly goal reopened: ${itemTitle}`,
+          isDone ? '✓' : '•'
+        );
+      }
+      return { ...prev, weeklyChecklist };
+    });
+  }, []);
+
+  const addWeekly = useCallback((title: string) => {
+    saveState((prev) => {
+      const newItem = {
+        id: Date.now().toString(),
+        title: title.trim(),
+        completed: false,
+        createdAt: new Date().toISOString(),
+      };
+      logActivity(`Added weekly objective: ${newItem.title}`, '+');
+      return {
+        ...prev,
+        weeklyChecklist: [...prev.weeklyChecklist, newItem],
+      };
+    });
+  }, []);
+
+  const deleteWeekly = useCallback((id: string) => {
+    saveState((prev) => ({
+      ...prev,
+      weeklyChecklist: prev.weeklyChecklist.filter((w) => w.id !== id),
+    }));
+  }, []);
+
+  // ---------------- SLEEP LOGGING ----------------
+  const logSleep = useCallback(
+    (params: {
+      date: string;
+      start: string;
+      wake: string;
+      targetFormatted?: string;
+      status: SleepQuality;
+      notes?: string;
+    }) => {
+      const duration = calculateSleepDuration(params.start, params.wake);
+      const newEntry: SleepEntry = {
+        id: Date.now().toString(),
+        date: params.date || getTodayDateString(),
+        start: params.start,
+        wake: params.wake,
+        durationMinutes: duration.minutes,
+        durationFormatted: duration.formatted,
+        targetFormatted: params.targetFormatted || '8h 00m',
+        status: params.status || 'GOOD',
+        notes: params.notes,
+      };
+
+      saveState((prev) => {
+        // Filter out any existing record for the exact same date to prevent duplicates
+        const filtered = prev.sleepRecords.filter((s) => s.date !== newEntry.date);
+        const updatedRecords = [newEntry, ...filtered];
+        logActivity(
+          `Sleep recorded for ${newEntry.date}: ${newEntry.durationFormatted} [${newEntry.status}]`,
+          '✓'
+        );
+        return {
+          ...prev,
+          sleepRecords: updatedRecords,
+          sleep: {
+            start: newEntry.start,
+            wake: newEntry.wake,
+            total: newEntry.durationFormatted,
+            target: newEntry.targetFormatted,
+            status: newEntry.status,
+          },
+        };
+      });
+    },
+    []
+  );
+
+  const deleteSleep = useCallback((id: string) => {
+    saveState((prev) => {
+      const updated = prev.sleepRecords.filter((s) => s.id !== id);
+      return {
+        ...prev,
+        sleepRecords: updated,
+      };
+    });
+  }, []);
+
+  // ---------------- FOCUS SESSIONS ----------------
+  const finishFocusSession = useCallback((durationSeconds: number, projectName: string) => {
+    const todayStr = getTodayDateString();
+    const newSession = {
+      id: Date.now().toString(),
+      projectName: projectName.trim() || 'Deep Work',
+      durationSeconds,
+      timestamp: new Date().toISOString(),
+      date: todayStr,
+    };
+
+    saveState((prev) => {
+      const minutes = Math.max(1, Math.round(durationSeconds / 60));
+      logActivity(`Focus sprint concluded: ${newSession.projectName} (${minutes} mins)`, '⚡');
+      const sessions = [newSession, ...prev.focusSessions];
+      const todayTotal = sessions
+        .filter((s) => s.date === todayStr)
+        .reduce((sum, s) => sum + s.durationSeconds, 0);
+
+      return {
+        ...prev,
+        focusSessions: sessions,
+        focusSecondsToday: todayTotal,
+        focusSessionsCount: sessions.filter((s) => s.date === todayStr).length,
+      };
+    });
+  }, []);
+
+  // ---------------- ACTIVITY LOGS ----------------
   const addCustomLog = useCallback((text: string) => {
     logActivity(text, '>');
+  }, []);
+
+  const clearLogs = useCallback(() => {
+    saveState((prev) => ({
+      ...prev,
+      activityLogs: [],
+    }));
+  }, []);
+
+  // ---------------- SYSTEM / DATA MANAGEMENT ----------------
+  const loadDemoData = useCallback(() => {
+    const demo = getDemoState();
+    saveState(demo);
+  }, []);
+
+  const resetData = useCallback(() => {
+    const empty = createEmptyState();
+    saveState(empty);
+    logActivity('System storage initialized. Clean state active.', '>');
+  }, []);
+
+  const importData = useCallback((imported: LifeOSState) => {
+    saveState(imported);
+    logActivity('System backup data successfully imported.', '✓');
   }, []);
 
   const metrics = calculateMetrics(state);
@@ -177,9 +344,17 @@ export function useLifeOS() {
     deleteTask,
     toggleHabit,
     addHabit,
+    deleteHabit,
     toggleWeekly,
     addWeekly,
+    deleteWeekly,
+    logSleep,
+    deleteSleep,
     finishFocusSession,
     addCustomLog,
+    clearLogs,
+    loadDemoData,
+    resetData,
+    importData,
   };
 }

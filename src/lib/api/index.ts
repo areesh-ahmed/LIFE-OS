@@ -1,5 +1,5 @@
 import { fetchApi } from './client'
-import { Task, Habit, SleepLog, SystemMetrics } from '../mockData' // Temporarily reuse types
+import { Task, Habit, SleepLog, SystemMetrics } from '../types'
 
 export const authApi = {
   getMe: () => fetchApi<{ user: { id: string; name: string; email: string; avatarUrl: string } }>('/auth/me'),

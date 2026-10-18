@@ -5,10 +5,10 @@ import { useLifeOS } from '@/lib/useLifeOS';
 import { SystemWindow } from '@/components/ui/SystemWindow';
 
 export default function LogScreen() {
-  const { state, addCustomLog } = useLifeOS();
+  const { state, addCustomLog, clearLogs } = useLifeOS();
   const [logInput, setLogInput] = useState('');
 
-  const logs = state.activityLogs;
+  const logs = state.activityLogs || [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +26,15 @@ export default function LogScreen() {
             CHRONOLOGICAL SYSTEM AUDIT TRAIL
           </p>
         </div>
+        {logs.length > 0 && (
+          <button
+            onClick={clearLogs}
+            className="retro-border px-3 py-1 font-mono text-xs hover:bg-sys-pale-pink transition-none"
+            title="Clear all recorded logs"
+          >
+            CLEAR LOGS
+          </button>
+        )}
       </header>
 
       <SystemWindow title="SYSTEM TERMINAL" className="flex-1 retro-panel-dark">
@@ -49,26 +58,35 @@ export default function LogScreen() {
             </button>
           </form>
 
-          {logs.map((day) => (
-            <div key={day.date} className="flex flex-col gap-2">
-              <div className="text-sys-pink font-bold border-b border-sys-white/20 pb-1 uppercase tracking-wider flex justify-between">
-                <span>{day.date}</span>
-                <span className="text-sys-white/50 text-[11px]">{day.entries.length} EVENTS</span>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                {day.entries.map((entry, idx) => (
-                  <div
-                    key={idx}
-                    className="flex gap-3 sm:gap-4 items-start hover:bg-sys-white/10 px-2 py-1 transition-none"
-                  >
-                    <span className="opacity-60 w-12 shrink-0 text-xs">{entry.time}</span>
-                    <span className="text-sys-pink shrink-0 font-bold">{entry.status}</span>
-                    <span className="break-all">{entry.text}</span>
-                  </div>
-                ))}
-              </div>
+          {logs.length === 0 ? (
+            <div className="py-12 text-center text-sys-white/50 flex flex-col items-center justify-center gap-2">
+              <span className="text-sys-pink font-bold text-xs">[ AUDIT TRAIL EMPTY ]</span>
+              <span className="text-xs">
+                INTERACTIONS WITH TASKS, HABITS, SLEEP, AND FOCUS WILL AUTOMATICALLY RECORD HERE.
+              </span>
             </div>
-          ))}
+          ) : (
+            logs.map((day) => (
+              <div key={day.date} className="flex flex-col gap-2">
+                <div className="text-sys-pink font-bold border-b border-sys-white/20 pb-1 uppercase tracking-wider flex justify-between">
+                  <span>{day.date}</span>
+                  <span className="text-sys-white/50 text-[11px]">{day.entries.length} EVENTS</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {day.entries.map((entry, idx) => (
+                    <div
+                      key={idx}
+                      className="flex gap-3 sm:gap-4 items-start hover:bg-sys-white/10 px-2 py-1 transition-none"
+                    >
+                      <span className="opacity-60 w-12 shrink-0 text-xs">{entry.time}</span>
+                      <span className="text-sys-pink shrink-0 font-bold">{entry.status}</span>
+                      <span className="break-all">{entry.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
 
           <div className="mt-2 flex gap-2 items-center text-sys-white/50 animate-pulse text-xs">
             <div className="w-2 h-4 bg-sys-white/50" />

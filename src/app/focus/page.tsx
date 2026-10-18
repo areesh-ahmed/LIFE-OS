@@ -3,14 +3,18 @@
 import { useState, useEffect } from 'react';
 import { useLifeOS } from '@/lib/useLifeOS';
 import { SystemWindow } from '@/components/ui/SystemWindow';
+import { getTodayDateString, formatMinutes } from '@/lib/dateUtils';
+import { FocusSession } from '@/lib/types';
 
 export default function FocusScreen() {
   const { state, finishFocusSession } = useLifeOS();
   const [active, setActive] = useState(false);
   const [seconds, setSeconds] = useState(0);
-  const [projectName, setProjectName] = useState('LIFE OS Core Development');
+  const [projectName, setProjectName] = useState('Deep Work');
   const [isEditingProject, setIsEditingProject] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+
+  const todayStr = getTodayDateString();
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -19,7 +23,6 @@ export default function FocusScreen() {
     }
     return () => clearInterval(interval);
   }, [active]);
-
 
   const formatTime = (totalSeconds: number) => {
     const h = Math.floor(totalSeconds / 3600);
@@ -46,6 +49,9 @@ export default function FocusScreen() {
   const totalFocusSeconds = state.focusSecondsToday + (active ? seconds : 0);
   const focusHours = Math.floor(totalFocusSeconds / 3600);
   const focusMins = Math.floor((totalFocusSeconds % 3600) / 60);
+
+  // Today's focus sessions
+  const todaySessions = (state.focusSessions || []).filter((s: FocusSession) => s.date === todayStr);
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6 pb-8 h-full">
@@ -106,7 +112,7 @@ export default function FocusScreen() {
               [ {active ? 'PAUSE' : 'START'} ]
             </button>
             <button
-              className="retro-button flex-1 py-3 text-sm bg-sys-line text-sys-white hover:bg-sys-pink hover:text-sys-base"
+              className="retro-button flex-1 py-3 text-sm bg-sys-line text-sys-white hover:bg-sys-pink hover:text-sys-base disabled:opacity-50 disabled:hover:bg-sys-line disabled:hover:text-sys-white"
               onClick={handleFinish}
               disabled={seconds === 0}
             >
@@ -134,8 +140,34 @@ export default function FocusScreen() {
           <div className="w-2 h-12 border-l-2 border-sys-line border-dashed" />
           <div className="flex flex-col items-center gap-1">
             <span className="text-xs opacity-70">SESSIONS LOGGED</span>
-            <span className="text-2xl font-bold">{state.focusSessionsCount}</span>
+            <span className="text-2xl font-bold">{todaySessions.length}</span>
           </div>
+        </div>
+      </SystemWindow>
+
+      {/* TODAY'S RECORDED SESSIONS */}
+      <SystemWindow title="TODAY'S RECORDED SPRINTS">
+        <div className="flex flex-col gap-2 font-mono text-xs">
+          {todaySessions.length === 0 ? (
+            <div className="p-6 text-center border border-dashed border-sys-line/30 bg-sys-pale-pink/5 text-sys-line/60">
+              NO FOCUS SESSIONS LOGGED TODAY. START THE ENGINE TO RECORD DEEP WORK.
+            </div>
+          ) : (
+            todaySessions.map((session: FocusSession, idx: number) => (
+              <div
+                key={session.id || idx}
+                className="flex justify-between items-center px-3 py-2 border-b border-sys-line/20 last:border-0 hover:bg-sys-pale-pink/20"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sys-pink font-bold">⚡</span>
+                  <span className="font-bold">{session.projectName}</span>
+                </div>
+                <div className="text-sys-line/80 font-bold">
+                  {formatMinutes(Math.round(session.durationSeconds / 60))}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </SystemWindow>
     </div>

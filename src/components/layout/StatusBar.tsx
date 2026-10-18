@@ -38,7 +38,7 @@ export function StatusBar() {
         HABITS: {isLoaded ? `${completedHabits.toString().padStart(2, '0')}/${totalHabits.toString().padStart(2, '0')}` : '--/--'}
       </span>
       <span className="hidden lg:inline-block">
-        SLEEP: {isLoaded ? state.sleep.total : '--:--'}
+        SLEEP: {isLoaded ? (state.sleep?.total || '--:--') : '--:--'}
       </span>
       <span className="hidden lg:inline-block">
         FOCUS: {isLoaded ? `${focusH.toString().padStart(2, '0')}:${focusM.toString().padStart(2, '0')}` : '--:--'}

@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { useLifeOS } from '@/lib/useLifeOS';
 import { SystemWindow } from '@/components/ui/SystemWindow';
 import { RetroModal } from '@/components/ui/RetroModal';
+import { Priority, TaskCategory } from '@/lib/types';
+import { getTodayDateString } from '@/lib/dateUtils';
 
 type Tab = 'TODAY' | 'UPCOMING' | 'COMPLETED' | 'ALL';
 const TABS: Tab[] = ['TODAY', 'UPCOMING', 'COMPLETED', 'ALL'];
 const CATEGORIES = ['ALL', 'STUDY', 'WORK', 'HEALTH', 'GROWTH', 'SYSTEM'];
-const SORT_MODES = ['DEFAULT', 'PRIORITY', 'TIME', 'TITLE'];
+const SORT_MODES = ['DEFAULT', 'PRIORITY', 'DATE/TIME', 'TITLE'];
 
 export default function TasksScreen() {
   const { state, toggleTask, addTask, deleteTask } = useLifeOS();
@@ -17,13 +19,17 @@ export default function TasksScreen() {
   const [sortIndex, setSortIndex] = useState(0);
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
 
+  const todayStr = getTodayDateString();
+
   // Form state
   const [newTitle, setNewTitle] = useState('');
-  const [newCategory, setNewCategory] = useState('STUDY');
-  const [newPriority, setNewPriority] = useState<'HIGH' | 'MEDIUM' | 'LOW'>('MEDIUM');
+  const [newCategory, setNewCategory] = useState<TaskCategory>('STUDY');
+  const [newPriority, setNewPriority] = useState<Priority>('MEDIUM');
+  const [newDate, setNewDate] = useState(todayStr);
   const [newTime, setNewTime] = useState('');
 
   const tasks = state.tasks;
+  const completedCount = tasks.filter((t) => t.completed).length;
 
   const cycleSort = () => {
     setSortIndex((prev) => (prev + 1) % SORT_MODES.length);
@@ -37,17 +43,25 @@ export default function TasksScreen() {
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
-    addTask(newTitle.trim(), newCategory, newPriority, newTime || undefined);
+    addTask(
+      newTitle.trim(),
+      newCategory,
+      newPriority,
+      newTime || undefined,
+      newDate || todayStr
+    );
     setNewTitle('');
     setNewTime('');
+    setNewDate(todayStr);
     setIsNewTaskOpen(false);
   };
 
   // Filter logic
   let filteredTasks = tasks.filter((task) => {
+    const taskDate = task.date || todayStr;
     if (activeTab === 'COMPLETED') return task.completed;
-    if (activeTab === 'TODAY') return !task.completed;
-    if (activeTab === 'UPCOMING') return !task.completed && (task.time || task.priority === 'HIGH');
+    if (activeTab === 'TODAY') return !task.completed && taskDate <= todayStr;
+    if (activeTab === 'UPCOMING') return !task.completed && taskDate > todayStr;
     return true; // 'ALL'
   });
 
@@ -59,11 +73,13 @@ export default function TasksScreen() {
   const currentSort = SORT_MODES[sortIndex];
   filteredTasks = [...filteredTasks].sort((a, b) => {
     if (currentSort === 'PRIORITY') {
-      const pWeights = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+      const pWeights: Record<Priority, number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
       return (pWeights[b.priority] || 0) - (pWeights[a.priority] || 0);
     }
-    if (currentSort === 'TIME') {
-      return (a.time || '99:99').localeCompare(b.time || '99:99');
+    if (currentSort === 'DATE/TIME') {
+      const aVal = `${a.date || '9999'} ${a.time || '99:99'}`;
+      const bVal = `${b.date || '9999'} ${b.time || '99:99'}`;
+      return aVal.localeCompare(bVal);
     }
     if (currentSort === 'TITLE') {
       return a.title.localeCompare(b.title);
@@ -77,7 +93,7 @@ export default function TasksScreen() {
         <div>
           <h1 className="font-display text-2xl md:text-3xl tracking-wider mb-1 uppercase">TASK SYSTEM</h1>
           <p className="font-mono text-xs opacity-80 uppercase tracking-widest">
-            {tasks.filter((t) => t.completed).length} OF {tasks.length} OPERATIONS RESOLVED
+            {completedCount} OF {tasks.length} OPERATIONS RESOLVED
           </p>
         </div>
       </header>
@@ -130,13 +146,22 @@ export default function TasksScreen() {
           <div className="bg-sys-line text-sys-white font-mono text-xs grid grid-cols-12 gap-4 px-4 py-1.5 select-none">
             <div className="col-span-12 sm:col-span-6">TASK</div>
             <div className="hidden sm:block col-span-2">CATEGORY</div>
-            <div className="hidden sm:block col-span-2">TIME</div>
+            <div className="hidden sm:block col-span-2">DATE &amp; TIME</div>
             <div className="hidden sm:block col-span-2 text-right">PRIORITY / ACTIONS</div>
           </div>
 
           {filteredTasks.length === 0 ? (
-            <div className="p-8 text-center font-mono text-sys-line/50 text-sm bg-sys-white">
-              NO TASKS MATCH THE CURRENT FILTER OR TAB.
+            <div className="p-8 text-center font-mono text-sys-line/60 text-xs sm:text-sm bg-sys-white flex flex-col items-center justify-center gap-2">
+              <span className="font-bold text-sys-pink">
+                {tasks.length === 0
+                  ? '[ NO TASKS RECORDED ]'
+                  : `[ NO TASKS FOR "${activeTab}" / "${categoryFilter}" ]`}
+              </span>
+              <span>
+                {tasks.length === 0
+                  ? 'CLICK + NEW TASK TO REGISTER YOUR FIRST OPERATION.'
+                  : 'TRY ADJUSTING YOUR FILTER OR SORT CRITERIA.'}
+              </span>
             </div>
           ) : (
             filteredTasks.map((task) => (
@@ -167,17 +192,21 @@ export default function TasksScreen() {
                       {task.title}
                     </span>
                     <span className="sm:hidden font-mono text-xs text-sys-line/60 mt-1">
-                      {task.category} &middot; {task.time || '--:--'} &middot; {task.priority}
+                      {task.category} &middot; {task.date === todayStr ? 'Today' : task.date}{' '}
+                      {task.time ? `(${task.time})` : ''} &middot; {task.priority}
                     </span>
                   </div>
                 </div>
 
-                <div className="hidden sm:flex col-span-2 items-center font-mono text-xs text-sys-line/70">
+                <div className="hidden sm:flex col-span-2 items-center font-mono text-xs text-sys-line/70 uppercase">
                   {task.category}
                 </div>
 
                 <div className="hidden sm:flex col-span-2 items-center font-mono text-xs text-sys-line/70">
-                  {task.time || '--:--'}
+                  <span>
+                    {task.date === todayStr ? 'TODAY' : task.date || '--'}
+                    {task.time ? ` · ${task.time}` : ''}
+                  </span>
                 </div>
 
                 <div className="hidden sm:flex col-span-2 items-center justify-end gap-3 font-mono text-xs">
@@ -231,7 +260,7 @@ export default function TasksScreen() {
               <label className="font-bold">CATEGORY</label>
               <select
                 value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
+                onChange={(e) => setNewCategory(e.target.value as TaskCategory)}
                 className="retro-border px-2 py-2 bg-sys-white outline-none"
               >
                 <option value="STUDY">STUDY</option>
@@ -246,7 +275,7 @@ export default function TasksScreen() {
               <label className="font-bold">PRIORITY</label>
               <select
                 value={newPriority}
-                onChange={(e) => setNewPriority(e.target.value as 'HIGH' | 'MEDIUM' | 'LOW')}
+                onChange={(e) => setNewPriority(e.target.value as Priority)}
                 className="retro-border px-2 py-2 bg-sys-white outline-none"
               >
                 <option value="HIGH">HIGH</option>
@@ -256,15 +285,26 @@ export default function TasksScreen() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="font-bold">SCHEDULED TIME (OPTIONAL)</label>
-            <input
-              type="text"
-              value={newTime}
-              onChange={(e) => setNewTime(e.target.value)}
-              placeholder="e.g., 16:45"
-              className="retro-border px-3 py-2 bg-sys-white outline-none focus:bg-sys-pale-pink/20"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="font-bold">DATE</label>
+              <input
+                type="date"
+                required
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+                className="retro-border px-3 py-2 bg-sys-white outline-none focus:bg-sys-pale-pink/20 font-mono text-xs"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="font-bold">TIME (OPTIONAL)</label>
+              <input
+                type="time"
+                value={newTime}
+                onChange={(e) => setNewTime(e.target.value)}
+                className="retro-border px-3 py-2 bg-sys-white outline-none focus:bg-sys-pale-pink/20 font-mono text-xs"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t-2 border-sys-line mt-2">

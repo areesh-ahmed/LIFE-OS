@@ -218,5 +218,5 @@ LIFE-OS/
 Distributed under the MIT License. See `LICENSE` for more information.
 
 <div align="center">
-  <sub>Built with ⚡ for high performance and daily discipline.</sub>
+  <sub>Built with ❤️ for productivity, focus and daily discipline.</sub>
 </div>
