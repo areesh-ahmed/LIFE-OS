@@ -211,26 +211,7 @@ LIFE-OS/
 └── tailwind.config.ts        # Custom retro color tokens & font variables
 ```
 
----
 
-## 🎨 Design System & Palette
-
-| Token | Hex Code | Visual Preview | Description |
-|:---|:---|:---:|:---|
-| `sys-base` | `#1A1025` | <img src="https://via.placeholder.com/20/1A1025/1A1025.png" width="16" height="16" /> | Deep violet background base |
-| `sys-dark-violet` | `#2D1B4E` | <img src="https://via.placeholder.com/20/2D1B4E/2D1B4E.png" width="16" height="16" /> | Dot-grid texture accents |
-| `sys-lavender` | `#A585FF` | <img src="https://via.placeholder.com/20/A585FF/A585FF.png" width="16" height="16" /> | Secondary typography & border highlights |
-| `sys-pink` | `#FF2E93` | <img src="https://via.placeholder.com/20/FF2E93/FF2E93.png" width="16" height="16" /> | Neon primary accent & priority flags |
-| `sys-pale-pink` | `#FFB8D8` | <img src="https://via.placeholder.com/20/FFB8D8/FFB8D8.png" width="16" height="16" /> | Hover states & panel highlights |
-| `sys-line` | `#0D0814` | <img src="https://via.placeholder.com/20/0D0814/0D0814.png" width="16" height="16" /> | Hard brutalist border color |
-| `sys-white` | `#F8F5F2` | <img src="https://via.placeholder.com/20/F8F5F2/F8F5F2.png" width="16" height="16" /> | Retro parchment window panels |
-
-* **Typography**:
-  - Headers & Chrome: `Silkscreen` (Pixel font)
-  - Data & Metrics: `Space Mono` (Fixed-width console font)
-  - Body Copy: `Atkinson Hyperlegible` (High-clarity sans-serif)
-
----
 
 ## 🛡️ License
 
